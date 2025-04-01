@@ -1,5 +1,5 @@
 ## Introduction
-We’re excited to release the code soon! Stay tuned for updates.
+We're excited to release the code soon! Stay tuned for updates.
 
 ## Setup
 ### Requirements
@@ -67,13 +67,81 @@ If extracted to a different location, update the corresponding path variables in
 ### Extra Preparation
 Running variants other than vo-qwn-qwn-qwn and contrastive matching evaluation requires additional setup:
 
-+ ResNet50 action module (rn) needs `data/checkpoints/actionclassifier/best_microsoft_resnet-50.pth`.
-+ DINOv2 action module (dn) needs `data/checkpoints/actionclassifier/best_dinov2_base.pth`.
-+ MAE scene module (mae) needs `data/checkpoints/mae/mae_tune_vit_base.pth`.
-+ SWAG scene and object modules (swg) need `data/places365_cls_idx.json`, `data/in_cls_idx.json`.
++ ResNet50 module (rn) needs `data/checkpoints/actionclassifier/best_microsoft_resnet-50.pth`.
++ DINOv2 module (dn) needs `data/checkpoints/actionclassifier/best_dinov2_base.pth`.
++ MAE module (mae) needs `data/checkpoints/mae/mae_tune_vit_base.pth`.
++ SWAG module (swg) needs `data/places365_cls_idx.json`, `data/in_cls_idx.json`.
 + gpt, llm, gmm modules need authentication. Change corresponding api_key or hf_token in `tools/config.py`.
 + **Important**: Contrastive matcher needs `data/checkpoints/cm/cm.pth`, `data/episodes_orders.json` and `data/episodes_insts_orders.json`. These two JSON files ensure consistent batch ordering; otherwise, evaluation results may vary.
 
-These files are also available:
+These files are also released:
 
-[[Model Weights]]()
+[Model Weights]
+
+
+## NavComposer
+
+### Usage
+
+The script `generation.sh` provides the simplest way to run NavComposer instruction generation:
+```
+bash generation.sh /path/to/dataset
+```
+or more directly:
+```
+conda activate navc
+torchrun main.py --config_file main.yaml run_folder=/path/to/dataset
+```
+This will generate three instructions for each trajectory, using the vo-qwn-qwn-qwn variant. The generated instructions will be saved in the `inst_navcomposer` folder with filenames `0.txt`,`1.txt`,`2.txt`.
+
+`generation_full.sh` provides more options and examples to use NavComposer.
+
+
+## NavInstrCritic
+
+### Usage
+
+The script `evaluation.sh` provides the NavInstrCritic evaluation pipeline:
+```
+bash evaluation.sh all inst_navcomposer
+```
+This performs three types of evaluations on instructions with the alias 'inst_navcomposer'.
+The corresponding programs are located in `tools/nav_instr_critic`.
+Evaluation results will be placed in `data/speaker_evaluation`.
+
+You may need to download NLTK models before evaluation:
+```
+python -c "import nltk; nltk.download('averaged_perceptron_tagger_eng'); nltk.download('punkt_tab')"
+```
+
+## Visualization
+
+![Examples](examples.jpg "Examples")
+
+## Acknowledgements
+Our research utilizes a variety of datasets in experiments: 
+[VLN-CE](https://github.com/jacobkrantz/VLN-CE),
+[HM3D](https://aihabitat.org/datasets/hm3d/),
+[SceneNet](https://robotvault.bitbucket.io/scenenet-rgbd.html),
+[GRUtopia](https://github.com/OpenRobotLab/GRUtopia/tree/main),
+[SUN3D](https://sun3d.cs.princeton.edu/),
+[ScanNet](http://www.scan-net.org/),
+[TUM RGB-D](https://vision.in.tum.de/data/datasets/rgbd-dataset/download),
+[12-Scenes](https://graphics.stanford.edu/projects/reloc),
+[DIODE](https://diode-dataset.org/),
+[KITTI](https://www.cvlibs.net/datasets/kitti/raw_data.php). 
+
+Our research also leverages several open-source models: 
+[ResNet50](https://huggingface.co/microsoft/resnet-50),
+[DINOv2](https://huggingface.co/facebook/dinov2-base),
+[MAE](https://github.com/facebookresearch/mae),
+[SWAG](https://github.com/facebookresearch/SWAG),
+[DETR](https://huggingface.co/facebook/detr-resnet-50),
+[BLIP-2](https://huggingface.co/Salesforce/blip2-flan-t5-xl),
+[Llama-3.1](https://www.llama.com/llama3_1/),
+[LLaVA-1.6](https://github.com/haotian-liu/LLaVA),
+[Gemma-2](https://huggingface.co/google/gemma-2-9b-it),
+[Qwen2.5](https://github.com/QwenLM/Qwen2.5),
+[Qwen2.5-VL](https://github.com/QwenLM/Qwen2.5-VL).
+
+If you use these datasets or models, please ensure compliance with their respective agreements and licenses.
