@@ -51,13 +51,13 @@ Dataset and episode folder names are arbitrary—you can name them as you prefer
 To use customized trajectory datasets, ensure they follow the same structure.
 
 ### Pre-processed Data
-Several pre-processed datasets used in our experiments are available for download from BaiduNetdisk:
+Several pre-processed datasets used in our experiments are available for download:
 
-[VLN-CE Validation] [Diverse Sources]
+[[vlnce_traj_action_clean_v1_val.zip]](https://pan.baidu.com/s/1qzhIiKPgf_5PDvoyN8Vx4g), [[various_traj_clean_release.zip]](https://pan.baidu.com/s/1OY5dUNcVWhVnFma62dMtkQ) (extraction code: navc)
 
-We also provide generation results for the VLN-CE validation sets using two main variants: 
+We also provide generation results using two main variants: 
 
-[Navcomposer Instructions]
+[[vlnce_traj_action_clean_v1_navcomposer.zip]](https://pan.baidu.com/s/1mQ94104fMLV0TemAqdBnaQ)
 
 By default, all datasets and model weights are placed in the `data/` folder.
 Therefore, it's recommended to download them into `data/` and then unzip them.
@@ -76,14 +76,14 @@ Running variants other than vo-qwn-qwn-qwn and contrastive matching evaluation r
 
 These files are also released:
 
-[Model Weights]
+[[model_weights.zip]](https://pan.baidu.com/s/1T_XFyDJgmYcJ_YSu61KPkg)
 
 
 ## NavComposer
 
 ### Usage
 
-The script `generation.sh` provides the simplest way to run NavComposer instruction generation:
+The script `generation.sh` provides the simplest way to run NavComposer:
 ```
 bash generation.sh /path/to/dataset
 ```
@@ -94,7 +94,17 @@ torchrun main.py --config_file main.yaml run_folder=/path/to/dataset
 ```
 This will generate three instructions for each trajectory, using the vo-qwn-qwn-qwn variant. The generated instructions will be saved in the `inst_navcomposer` folder with filenames `0.txt`,`1.txt`,`2.txt`.
 
-`generation_full.sh` provides more options and examples to use NavComposer.
+`generation_full.sh` provides more options and examples.
+
+
+### Module Customization
+Our flexible framework makes it easy to include new module implementations.
+Here are the steps:
+1. Implement the module in a specific file. For example, implement the `Qwen2Object` class in the `object/qwen2_object.py`.
+2. Import the module in the corresponding `object/__init__.py`. For example, add `from . import qwen2_object`.
+3. Add a new configuration class in `tools/config.py`, for example, `Qwen2Config`.
+4. Add a member instance of the configuration in the corresponding module config, for example, add `qwen2_config: Qwen2Config = Qwen2Config()` into `ObjectConfig`.
+5. `Qwen2Object` can now be used by setting `object_config.name=Qwen2Object`.
 
 
 ## NavInstrCritic
