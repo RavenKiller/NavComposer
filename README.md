@@ -67,16 +67,16 @@ If extracted to a different location, update the corresponding path variables in
 ### Extra Preparation
 Running variants other than vo-qwn-qwn-qwn and contrastive matching evaluation requires additional setup:
 
-+ ResNet50 module (rn) needs `data/checkpoints/actionclassifier/best_microsoft_resnet-50.pth`.
-+ DINOv2 module (dn) needs `data/checkpoints/actionclassifier/best_dinov2_base.pth`.
-+ MAE module (mae) needs `data/checkpoints/mae/mae_tune_vit_base.pth`.
-+ SWAG module (swg) needs `data/places365_cls_idx.json`, `data/in_cls_idx.json`.
++ ResNet50 module (rn) needs `data/model_weights/best_microsoft_resnet-50.pth`.
++ DINOv2 module (dn) needs `data/model_weights/best_dinov2_base.pth`.
++ MAE module (mae) needs `data/model_weights/mae_tune_vit_base.pth` and `data/model_weights/places365_cls_idx.json`.
++ SWAG module (swg) needs `data/model_weights/in_cls_idx.json`.
 + gpt, llm, gmm modules need authentication. Change corresponding api_key or hf_token in `tools/config.py`.
-+ **Important**: Contrastive matcher needs `data/checkpoints/cm/cm.pth`, `data/episodes_orders.json` and `data/episodes_insts_orders.json`. These two JSON files ensure consistent batch ordering; otherwise, evaluation results may vary.
++ **Important**: Contrastive matcher needs `data/model_weights/cm.pth`, `data/model_weights/episodes_orders.json` and `data/model_weights/episodes_insts_orders.json`. These two JSON files ensure consistent batch ordering; otherwise, evaluation results may vary.
 
 These files are also released:
 
-[[model_weights.zip]](https://pan.baidu.com/s/1T_XFyDJgmYcJ_YSu61KPkg)
+[[model_weights.zip]](https://pan.baidu.com/s/1sdvjWi6-16s5fSK1sbWyXw)
 
 
 ## NavComposer
