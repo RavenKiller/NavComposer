@@ -1,0 +1,13 @@
+run_type: generate
+run_folder: data/vlnce_traj_action/val_seen
+generate_num: 3
+generate_alias: inst_navcomposer
+
+action_config:
+  name: VOAction
+scene_config:
+  name: Qwen2Scene
+object_config:
+  name: Qwen2Object
+summary_config:
+  name: Qwen25Summary
