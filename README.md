@@ -147,9 +147,11 @@ Our research also leverages several open-source models:
 [MAE](https://github.com/facebookresearch/mae),
 [SWAG](https://github.com/facebookresearch/SWAG),
 [DETR](https://huggingface.co/facebook/detr-resnet-50),
+[OpenCLIP](https://github.com/mlfoundations/open_clip),
 [BLIP-2](https://huggingface.co/Salesforce/blip2-flan-t5-xl),
 [Llama-3.1](https://www.llama.com/llama3_1/),
 [LLaVA-1.6](https://github.com/haotian-liu/LLaVA),
+[InternVideo2.5](https://github.com/OpenGVLab/InternVideo),
 [Gemma-2](https://huggingface.co/google/gemma-2-9b-it),
 [Qwen2.5](https://github.com/QwenLM/Qwen2.5),
 [Qwen2.5-VL](https://github.com/QwenLM/Qwen2.5-VL).
