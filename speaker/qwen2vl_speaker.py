@@ -38,9 +38,8 @@ class Qwen25VLSpeaker:
                 self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
                     self.qwen2_config.model_name,
                     device_map=self.device,
-                    torch_dtype="auto",
-                    # torch_dtype=torch.bfloat16,
-                    # attn_implementation="flash_attention_2",
+                    torch_dtype=torch.bfloat16,
+                    attn_implementation="flash_attention_2",
                 )
             else:
                 self.model = Qwen2VLForConditionalGeneration.from_pretrained(

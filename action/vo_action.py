@@ -290,8 +290,8 @@ class VOAction:
             for i in range(1, len(preds) - 1):
                 if (
                     preds[i - 1] == preds[i + 1]
-                    and preds[i - 1] == 1
                     and preds[i - 1] != preds[i]
+                    # and preds[i - 1] == 1
                 ):
                     preds[i] = preds[i - 1]
         if self.post_process >= 1:

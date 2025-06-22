@@ -226,7 +226,10 @@ class SpeakerConfig:
     use_enter_leave: bool = True
     enter_leave_ratio: float = 0.5
     use_num_order: bool = False
-    action_first: bool = True  # put action before observations
+    action_first: bool = True
+    action_position: str = (
+        "first"  # first, last, dynamic (for turning, last; otherwise, first)
+    )
     image_resize: int = 0
     fps: float = 5.0
     downsample: int = 1

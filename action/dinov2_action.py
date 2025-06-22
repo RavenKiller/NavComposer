@@ -21,7 +21,10 @@ from action.datasets import ActionDataset
 
 from accelerate import Accelerator
 
-accelerator = Accelerator()
+try:
+    accelerator = Accelerator()
+except RuntimeError:
+    accelerator = Accelerator(cpu=True)
 
 
 #####################################################
