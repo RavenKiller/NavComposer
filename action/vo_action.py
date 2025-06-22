@@ -285,6 +285,15 @@ class VOAction:
         batch = {"first_image": first_image, "second_image": second_image}
         preds = self.vo(batch)
         preds = np.array(preds)
+        if self.post_process >= 2:
+            # ABA -> AAA
+            for i in range(1, len(preds) - 1):
+                if (
+                    preds[i - 1] == preds[i + 1]
+                    and preds[i - 1] != preds[i]
+                    # and preds[i - 1] == 1
+                ):
+                    preds[i] = preds[i - 1]
         if self.post_process >= 1:
             # AAB -> AAA
             i = 0
@@ -302,15 +311,6 @@ class VOAction:
                     ):
                         preds[i:j] = local_actions[0][0]
                 i = j
-        if self.post_process >= 2:
-            # ABA -> AAA
-            for i in range(1, len(preds) - 1):
-                if (
-                    preds[i - 1] == preds[i + 1]
-                    and preds[i - 1] != preds[i]
-                    # and preds[i - 1] == 1
-                ):
-                    preds[i] = preds[i - 1]
         preds = [self.action_map[v] for v in list(preds)]
         return preds
 
