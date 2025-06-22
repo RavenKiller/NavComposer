@@ -1,5 +1,4 @@
-## Introduction
-We're excited to release the code soon! Stay tuned for updates.
+# The official implementation of NavComposer
 
 ## Setup
 ### Requirements
