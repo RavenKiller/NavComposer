@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Navigation Instruction Quality Assessment</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Styles */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom styles for radio/checkbox */
+        .custom-control {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid #d1d5db; /* gray-300 */
+            display: inline-block;
+            position: relative;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            flex-shrink: 0;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .custom-control:checked {
+            border-color: #3b82f6; /* blue-500 */
+            background-color: #3b82f6; /* blue-500 */
+        }
+        /* Radio button style */
+        .custom-control.radio {
+            border-radius: 50%;
+        }
+        .custom-control.radio:checked::after {
+            content: '';
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        /* Checkbox style */
+        .custom-control.checkbox {
+             border-radius: 0.25rem;
+        }
+        .custom-control.checkbox:checked::after {
+            content: '';
+            display: block;
+            width: 0.35rem;
+            height: 0.7rem;
+            border: solid white;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+            position: absolute;
+            top: 0;
+            left: 0.35rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans antialiased text-gray-800">
+
+    <div id="app" class="container mx-auto max-w-screen-2xl p-4 sm:p-6 lg:p-8">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Navigation Instruction Quality Assessment</h1>
+            <p class="text-gray-600 mt-2">
+                Welcome! Please watch the navigation video and help us evaluate the quality of the instructions provided.<br>
+                For each question, select all options you find appropriate.                
+            </p>
+        </header>
+
+        <main id="survey-content" class="bg-white rounded-xl shadow-lg p-6 sm:p-8 relative">
+            <div id="loader" class="text-center py-16">
+                <p class="text-lg text-gray-600">Preparing the survey for you...</p>
+            </div>
+            
+            <div id="survey-card" class="hidden fade-in">
+                <div class="text-center mb-6">
+                    <span id="progress-indicator" class="text-lg font-semibold text-indigo-600"></span>
+                </div>
+
+                <!-- Flex container for two-column layout on large screens -->
+                <div class="lg:flex lg:gap-8">
+                    
+                    <!-- Left Column: Video Player -->
+                    <div class="lg:w-1/2 w-full mb-6 lg:mb-0">
+                         <div class="bg-gray-900 rounded-lg overflow-hidden shadow-md sticky top-8">
+                            <video id="video-player" class="w-full h-auto" controls playsinline>
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Questions -->
+                    <div id="questions-container" class="lg:w-1/2 w-full space-y-8">
+                        <!-- Questions will be dynamically inserted here -->
+                    </div>
+
+                </div>
+            </div>
+        </main>
+        
+        <!-- Disclaimer Text -->
+        <div class="mt-8 text-center text-sm text-gray-500">
+            <p>This is an anonymous research survey. No personal or identifying information will be collected, and participation is entirely voluntary. By submitting your responses, you indicate your consent to participate in this study.</p>
+        </div>
+
+        <footer class="mt-8 flex justify-between items-center">
+            <button id="prev-btn" class="bg-white hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                &larr; Previous
+            </button>
+            <button id="submit-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                Submit
+            </button>
+            <button id="next-btn" class="bg-white hover:bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
+                Next &rarr;
+            </button>
+        </footer>
+
+        <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white rounded-xl shadow-2xl p-8 max-w-sm text-center transform transition-all scale-95 opacity-0">
+                <h2 id="modal-title" class="text-2xl font-bold mb-4"></h2>
+                <p id="modal-message" class="text-gray-600 mb-6"></p>
+                <button id="modal-close-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-indigo-700">
+                    Close
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Global Configuration ---
+            const CONFIG = {
+                TOTAL_PATHS_TO_SHOW: 5,
+                // Set this to true to enable multi-select mode
+                ALLOW_MULTIPLE_CHOICES: true, 
+                // Updated questions based on the evaluation dimensions
+                QUESTIONS: [
+                    "Which instruction(s) accurately and consistently describe the navigation trajectory?",
+                    "Which instruction(s) demonstrate good linguistic diversity?"
+                ]
+            };
+
+            // --- State Variables ---
+            let allPathsData = {};
+            let userAnswers = {};
+            let currentPathIndex = 0;
+            let shuffledPathsData = []; // This will store paths with pre-shuffled instructions
+
+            // --- DOM Elements ---
+            const loader = document.getElementById('loader');
+            const surveyCard = document.getElementById('survey-card');
+            const videoPlayer = document.getElementById('video-player');
+            const questionsContainer = document.getElementById('questions-container');
+            const progressIndicator = document.getElementById('progress-indicator');
+            const nextBtn = document.getElementById('next-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+
+            // --- Initialization Function ---
+            async function init() {
+                try {
+                    const response = await fetch('data.json');
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    allPathsData = await response.json();
+                    
+                    const sampledPathIds = getRandomPaths(Object.keys(allPathsData), CONFIG.TOTAL_PATHS_TO_SHOW);
+                    
+                    // Shuffle instructions ONCE for all sampled paths at the beginning.
+                    shuffledPathsData = sampledPathIds.map(pathId => {
+                        const pathData = allPathsData[pathId];
+                        return {
+                            pathId: pathId,
+                            video: pathData.video,
+                            shuffledInstructions: shuffleArray(Object.entries(pathData.instructions))
+                        };
+                    });
+                    
+                    userAnswers = {};
+                    currentPathIndex = 0;
+                    renderPath(currentPathIndex);
+
+                    loader.classList.add('hidden');
+                    surveyCard.classList.remove('hidden');
+                    addEventListeners();
+                } catch (error) {
+                    loader.innerHTML = `<p class="text-red-500">Error: Could not load survey data (data.json).<br>${error}</p>`;
+                    console.error('Failed to load survey data:', error);
+                }
+            }
+
+            // --- Render Function ---
+            function renderPath(index) {
+                const currentPath = shuffledPathsData[index];
+                const pathId = currentPath.pathId;
+                const videoSrc = currentPath.video;
+                const shuffledInstructions = currentPath.shuffledInstructions;
+                
+                videoPlayer.src = videoSrc;
+                progressIndicator.textContent = `Progress: ${index + 1} / ${CONFIG.TOTAL_PATHS_TO_SHOW}`;
+                
+                questionsContainer.innerHTML = '';
+                CONFIG.QUESTIONS.forEach((questionText, qIndex) => {
+                    const questionDiv = document.createElement('div');
+                    questionDiv.className = 'fade-in';
+                    let optionsHTML = shuffledInstructions.map(([modelName, instructionText], oIndex) => {
+                        const uniqueId = `path_${pathId}_q_${qIndex}_o_${oIndex}`;
+                        const answerForThisQuestion = userAnswers[pathId]?.[qIndex];
+                        let isChecked = '';
+                        if (CONFIG.ALLOW_MULTIPLE_CHOICES) {
+                            isChecked = answerForThisQuestion?.includes(modelName) ? 'checked' : '';
+                        } else {
+                            isChecked = answerForThisQuestion === modelName ? 'checked' : '';
+                        }
+                        const inputType = CONFIG.ALLOW_MULTIPLE_CHOICES ? 'checkbox' : 'radio';
+                        const controlClass = CONFIG.ALLOW_MULTIPLE_CHOICES ? 'checkbox' : 'radio';
+                        return `
+                            <label for="${uniqueId}" class="flex items-start p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors">
+                                <input type="${inputType}" id="${uniqueId}" name="q_${pathId}_${qIndex}" value="${modelName}" class="custom-control ${controlClass} mt-1" ${isChecked}>
+                                <span class="ml-3 text-gray-700">${instructionText}</span>
+                            </label>
+                        `;
+                    }).join('');
+                    questionDiv.innerHTML = `
+                        <h3 class="text-lg font-semibold mb-3 text-gray-800">${qIndex + 1}. ${questionText}</h3>
+                        <div class="space-y-3">${optionsHTML}</div>
+                    `;
+                    questionsContainer.appendChild(questionDiv);
+                });
+                updateNavButtons();
+            }
+            
+            // --- Event Handlers ---
+            function handleOptionSelect(event) {
+                const target = event.target;
+                if (target.type !== 'radio' && target.type !== 'checkbox') return;
+
+                const [_, pathId, qIndexStr] = target.name.split('_');
+                const qIndex = parseInt(qIndexStr, 10);
+                const modelName = target.value;
+
+                if (!userAnswers[pathId]) {
+                    userAnswers[pathId] = {};
+                }
+
+                if (CONFIG.ALLOW_MULTIPLE_CHOICES) {
+                    const currentAnswers = userAnswers[pathId][qIndex] || [];
+                    if (target.checked) {
+                        currentAnswers.push(modelName);
+                    } else {
+                        const indexToRemove = currentAnswers.indexOf(modelName);
+                        if (indexToRemove > -1) {
+                            currentAnswers.splice(indexToRemove, 1);
+                        }
+                    }
+                    userAnswers[pathId][qIndex] = currentAnswers;
+
+                    const allOptionsForQuestion = document.querySelectorAll(`input[name="${target.name}"]`);
+                    const totalOptions = allOptionsForQuestion.length;
+
+                    if (currentAnswers.length === totalOptions) {
+                        target.checked = false;
+                        const indexToRemove = currentAnswers.indexOf(modelName);
+                        if (indexToRemove > -1) {
+                            currentAnswers.splice(indexToRemove, 1);
+                        }
+                        userAnswers[pathId][qIndex] = currentAnswers;
+                        showModal('Action Restricted', 'You cannot select all options for a single question.');
+                    }
+                } else {
+                    userAnswers[pathId][qIndex] = modelName;
+                }
+                
+                checkCompletion();
+            }
+
+            async function handleSubmit() {
+                if (!isAllAnswered()) {
+                    showModal('Submission Failed', 'You still have unanswered questions. Please complete all items before submitting.');
+                    return;
+                }
+                
+                const finalResult = {
+                    userId: 'user_' + new Date().getTime(),
+                    submissionTime: new Date().toISOString(),
+                    config: { allowMultipleChoices: CONFIG.ALLOW_MULTIPLE_CHOICES },
+                    answers: userAnswers
+                };
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = 'Submitting...';
+
+                try {
+                    const response = await fetch('/submit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(finalResult),
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.message || 'Server responded with an error.');
+                    }
+
+                    showModal('Thank you for your participation!', 'Your responses have been successfully recorded.', () => {
+                       submitBtn.innerHTML = 'Submitted';
+                       nextBtn.disabled = true;
+                       prevBtn.disabled = true;
+                       questionsContainer.style.pointerEvents = 'none';
+                       questionsContainer.style.opacity = '0.7';
+                    });
+                } catch (error) {
+                    console.error('Submission failed:', error);
+                    showModal('Submission Error', `Could not save your responses. Please try again later. Error: ${error.message}`);
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Submit';
+                }
+            }
+
+            function addEventListeners() {
+                prevBtn.addEventListener('click', () => {
+                    if (currentPathIndex > 0) {
+                        currentPathIndex--;
+                        renderPath(currentPathIndex);
+                    }
+                });
+                nextBtn.addEventListener('click', () => {
+                    if (currentPathIndex < CONFIG.TOTAL_PATHS_TO_SHOW - 1) {
+                        currentPathIndex++;
+                        renderPath(currentPathIndex);
+                    }
+                });
+                submitBtn.addEventListener('click', handleSubmit);
+                questionsContainer.addEventListener('change', handleOptionSelect);
+                modalCloseBtn.addEventListener('click', hideModal);
+            }
+
+            // --- Helper Functions ---
+            function updateNavButtons() {
+                prevBtn.disabled = currentPathIndex === 0;
+                nextBtn.disabled = currentPathIndex === CONFIG.TOTAL_PATHS_TO_SHOW - 1;
+            }
+            function checkCompletion() {
+                if (isAllAnswered()) {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.add('animate-pulse');
+                } else {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.remove('animate-pulse');
+                }
+            }
+            
+            function isAllAnswered() {
+                // Quick check: has the user answered on every page?
+                if (Object.keys(userAnswers).length < CONFIG.TOTAL_PATHS_TO_SHOW) {
+                    return false;
+                }
+                
+                // Iterate through the actual paths shown to the user (shuffledPathsData)
+                return shuffledPathsData.every(pathData => {
+                    const pathId = pathData.pathId;
+                    const answersForPath = userAnswers[pathId];
+                    
+                    // Check if there are answers for this path, and if the number of answered questions is correct.
+                    if (!answersForPath || Object.keys(answersForPath).length < CONFIG.QUESTIONS.length) {
+                        return false;
+                    }
+
+                    // Check if each answer is valid (not empty).
+                    return Object.values(answersForPath).every(answer => {
+                        if (CONFIG.ALLOW_MULTIPLE_CHOICES) {
+                            return Array.isArray(answer) && answer.length > 0;
+                        }
+                        return !!answer; // For single choice, just check if it exists.
+                    });
+                });
+            }
+
+            function getRandomPaths(arr, n) {
+                return shuffleArray([...arr]).slice(0, n);
+            }
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+            function showModal(title, message, onCloseCallback) {
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.querySelector('div').classList.remove('scale-95', 'opacity-0');
+                }, 10);
+                if(onCloseCallback) {
+                    modalCloseBtn.onclick = () => {
+                        hideModal();
+                        onCloseCallback();
+                        modalCloseBtn.onclick = null;
+                    };
+                } else {
+                    modalCloseBtn.onclick = hideModal;
+                }
+            }
+            function hideModal() {
+                 modal.querySelector('div').classList.add('scale-95', 'opacity-0');
+                 setTimeout(() => {
+                    modal.classList.add('hidden');
+                 }, 200);
+            }
+
+            // --- Start the App ---
+            init();
+        });
+    </script>
+</body>
+</html>

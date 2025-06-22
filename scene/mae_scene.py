@@ -73,6 +73,11 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
 
         return outcome
 
+    def forward(self, x):  # To correspond with timm==0.3.2
+        x = self.forward_features(x)
+        x = self.head(x)
+        return x
+
 
 def vit_base_patch16(**kwargs):
     model = VisionTransformer(
@@ -182,10 +187,12 @@ class MAEScene:
             cur_images = images[i : min(len(images), i + batch_size)]
             batch_image = [self.transform_image(image) for image in cur_images]
             batch_image = torch.stack(batch_image).to(self.device)
+            print(batch_image.shape)
             with torch.no_grad():
-                _, cur_preds = self.model(batch_image)[
-                    :, : self.actual_nb_classes
-                ].topk(self.topk)
+                logits = self.model(batch_image)
+                _, cur_preds = logits[:, : self.actual_nb_classes].topk(
+                    self.topk, dim=1
+                )
             preds.append(cur_preds)
         preds = torch.cat(preds, dim=0)
         n, m = preds.shape
@@ -205,9 +212,9 @@ if __name__ == "__main__":
     config = get_config(config_file="./main.yaml")
     tmp = MAEScene(config)
     images = [
-        Image.open("data/places365_standard/train/airfield/00000012.jpg"),
-        Image.open("data/places365_standard/train/valley/00000002.jpg"),
-        Image.open("data/places365_standard/train/bedroom/00000004.jpg"),
+        Image.open("data/r_vlnce/val_seen/2852/rgb/3_0.jpg"),
+        Image.open("data/r_vlnce/val_seen/2852/rgb/4_0.jpg"),
+        Image.open("data/r_vlnce/val_seen/2852/rgb/5_0.jpg"),
     ]
     res = tmp(images)
     print(res)

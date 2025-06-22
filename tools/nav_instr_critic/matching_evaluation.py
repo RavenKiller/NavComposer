@@ -64,6 +64,7 @@ class DataConfig:
     downsample_limit: int = 500  # downsample all trajectories into 500 steps
     use_downsample: int = 0
     limit_path_length: int = 300  # 0: no limit, >0: keep first limit_path_length frames
+    use_episodes_orders: bool = True
 
 
 @dataclass
@@ -142,7 +143,10 @@ from accelerate import Accelerator
 import time
 from accelerate.logging import MultiProcessAdapter
 
-accelerator = Accelerator()
+try:
+    accelerator = Accelerator()
+except RuntimeError:
+    accelerator = Accelerator(cpu=True)
 
 
 class BaseTrainer:
@@ -763,6 +767,7 @@ class MatcherDataset(Dataset):
         self.downsample_limit = config.data_config.downsample_limit
         self.use_downsample = config.data_config.use_downsample
         self.limit_path_length = config.data_config.limit_path_length
+        self.use_episodes_orders = config.data_config.use_episodes_orders
         self.episodes = []
         self.episodes_insts = []
 
@@ -770,24 +775,38 @@ class MatcherDataset(Dataset):
         self.depth_alias = config.data_config.depth_alias
         self.text_alias = config.data_config.text_alias
 
-        try:
-            ## Load episode orders
-            with open("data/model_weights/episodes_orders.json", "r") as f:
-                self.episodes = json.load(f)
-                self.episodes = [Path(v) for v in self.episodes]
-            with open("data/model_weights/episodes_insts_orders.json", "r") as f:
-                self.episodes_insts = json.load(f)
+        if self.use_episodes_orders:
+            try:
+                ## Load episode orders
+                with open("data/model_weights/episodes_orders.json", "r") as f:
+                    self.episodes = json.load(f)
+                    self.episodes = [Path(v) for v in self.episodes]
+                with open("data/model_weights/episodes_insts_orders.json", "r") as f:
+                    self.episodes_insts = json.load(f)
 
-                def replace_inst_alias(p):
-                    parts = list(p.parts)
-                    parts[-2] = self.text_alias
-                    return Path(*parts)
+                    def replace_inst_alias(p):
+                        parts = list(p.parts)
+                        parts[-2] = self.text_alias
+                        return Path(*parts)
 
-                self.episodes_insts = [
-                    replace_inst_alias(Path(v)) for v in self.episodes_insts
-                ]
-        except FileNotFoundError:
-            ## Load episodes by glob. Caution: Different episode orders may lead to different results
+                    self.episodes_insts = [
+                        replace_inst_alias(Path(v)) for v in self.episodes_insts
+                    ]
+            except FileNotFoundError:
+                ## Load episodes by glob. Caution: Different episode orders may lead to different results
+                for i, source in enumerate(self.sources):
+                    for split in self.splits:
+                        for episode in (self.data_path / source / split).glob("*"):
+                            inst_paths = list((episode / self.text_alias).glob("*.txt"))
+                            for inst_path in inst_paths:
+                                self.episodes.append(episode)
+                                self.episodes_insts.append(inst_path)
+                os.makedirs("data/model_weights", exist_ok=True)
+                with open("data/model_weights/episodes_orders.json", "w") as f:
+                    json.dump([str(v) for v in self.episodes], f, indent=2)
+                with open("data/model_weights/episodes_insts_orders.json", "w") as f:
+                    json.dump([str(v) for v in self.episodes_insts], f, indent=2)
+        else:
             for i, source in enumerate(self.sources):
                 for split in self.splits:
                     for episode in (self.data_path / source / split).glob("*"):
@@ -795,10 +814,6 @@ class MatcherDataset(Dataset):
                         for inst_path in inst_paths:
                             self.episodes.append(episode)
                             self.episodes_insts.append(inst_path)
-            with open("data/model_weights/episodes_orders.json", "w") as f:
-                json.dump([str(v) for v in self.episodes], f, indent=2)
-            with open("data/model_weights/episodes_insts_orders.json", "w") as f:
-                json.dump([str(v) for v in self.episodes_insts], f, indent=2)
 
         self.color_params = config.data_config.color_params
         self.colorjitter_eval = config.data_config.colorjitter_eval
@@ -1119,10 +1134,10 @@ class MatcherTrainer(BaseTrainer):
                         split = batch["split"][i]
                         episode_id = batch["episode_id"][i]
                         inst_id = batch["inst_id"][i]
-                        v_feat_path = feature_dir / "_".join(
+                        v_feat_path = feature_dir / "@".join(
                             [source, split, episode_id, inst_id, "v.pt"]
                         )
-                        t_feat_path = feature_dir / "_".join(
+                        t_feat_path = feature_dir / "@".join(
                             [source, split, episode_id, inst_id, "t.pt"]
                         )
                         torch.save(v_feat, v_feat_path)
@@ -1133,8 +1148,8 @@ class MatcherTrainer(BaseTrainer):
 
             ## full metrics
             if self.config.trainer_config.log_full_metrics:
-                v_feat_paths = natsorted(list(feature_dir.glob("*_v.pt")))
-                t_feat_paths = natsorted(list(feature_dir.glob("*_t.pt")))
+                v_feat_paths = natsorted(list(feature_dir.glob("*@v.pt")))
+                t_feat_paths = natsorted(list(feature_dir.glob("*@t.pt")))
                 assert len(v_feat_paths) == len(t_feat_paths)
                 N = len(v_feat_paths)
                 score = torch.zeros((N, N), dtype=float)

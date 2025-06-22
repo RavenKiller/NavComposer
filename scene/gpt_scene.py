@@ -33,7 +33,21 @@ class GPTScene:
         self.model_name = self.gpt_config.model_name
 
     def process_single_image(self, s):
+        if not isinstance(s, list):
+            s = [s]
         error = True
+        content = [
+            {"type": "text", "text": self.system_prompt},
+        ]
+        for v in s:
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "data:image/jpeg;base64,{}".format(im_2_b64(v))
+                    },
+                }
+            )
         while error:
             try:
                 response = self.client.chat.completions.create(
@@ -41,17 +55,7 @@ class GPTScene:
                     messages=[
                         {
                             "role": "user",
-                            "content": [
-                                {"type": "text", "text": self.system_prompt},
-                                {
-                                    "type": "image_url",
-                                    "image_url": {
-                                        "url": "data:image/jpeg;base64,{}".format(
-                                            im_2_b64(s)
-                                        )
-                                    },
-                                },
-                            ],
+                            "content": content,
                         }
                     ],
                     max_tokens=50,

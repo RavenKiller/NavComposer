@@ -58,6 +58,8 @@ class Qwen2Scene:
     def __call__(self, images, question=None):
         if question is None:
             question = self.question
+        if not isinstance(images[0], list):
+            images = [[v] for v in images]
         messages = [
             [
                 {
@@ -66,12 +68,13 @@ class Qwen2Scene:
                         {
                             "type": "image",
                             "image": "data:image/jpeg;base64,{}".format(im_2_b64(s)),
-                        },
-                        {"type": "text", "text": question},
-                    ],
+                        }
+                        for s in ss
+                    ]
+                    + [{"type": "text", "text": question}],
                 },
             ]
-            for s in images
+            for ss in images
         ]
         texts = [
             self.processor.apply_chat_template(

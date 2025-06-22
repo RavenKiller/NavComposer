@@ -1,4 +1,5 @@
 data
+nav_data
 logs
 __pycache__
 .ipynb_checkpoints
@@ -28,5 +29,5 @@ tmp.py
 tmp.sh
 tmp*.jpg
 tmp*.png
-
+*.mp4
 *.ipynb
