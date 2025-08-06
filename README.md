@@ -1,4 +1,18 @@
-# The official implementation of NavComposer
+
+<div align="center">
+<h1>NavComposer: Composing Language Instructions for Navigation Trajectories through Action-Scene-Object Modularization  </h1>
+<div>
+    [IEEE TCSVT Accept]
+    <a href='https://arxiv.org/abs/2507.10894' target='_blank'>[arXiv]</a> 
+</div>
+</div>
+<br />
+<div align="center">
+    <img src="https://github.com/user-attachments/assets/e2786b31-e154-4be1-9248-61ae3b5cb94e", width="60%", alt="TAC pre-training">
+</div>
+<!-- <img width="2749" height="1518" alt="introduction" src="https://github.com/user-attachments/assets/e2786b31-e154-4be1-9248-61ae3b5cb94e" /> -->
+<br />
+Language-guided navigation is a cornerstone of embodied AI, enabling agents to interpret language instructions and navigate complex environments. However, expert-provided instructions are limited in quantity, while synthesized annotations often lack quality, making them insufficient for large-scale research. To address this, we propose NavComposer, a novel framework for automatically generating high-quality navigation instructions. NavComposer explicitly decomposes semantic entities such as actions, scenes, and objects, and recomposes them into natural language instructions. Its modular architecture allows flexible integration of state-of-the-art techniques, while the explicit use of semantic entities enhances both the richness and accuracy of instructions. Moreover, it operates in a data-agnostic manner, supporting adaptation to diverse navigation trajectories without domain-specific training. Complementing NavComposer, we introduce NavInstrCritic, a comprehensive annotation-free evaluation system that assesses navigation instructions on three dimensions: contrastive matching, semantic consistency, and linguistic diversity. NavInstrCritic provides a holistic evaluation of instruction quality, addressing limitations of traditional metrics that rely heavily on expert annotations. By decoupling instruction generation and evaluation from specific navigation agents, our method enables more scalable and generalizable research. Extensive experiments provide direct and practical evidence for the effectiveness of our method.
 
 ## Setup
 ### Requirements
