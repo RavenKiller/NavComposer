@@ -2,8 +2,8 @@
 <div align="center">
 <h1>NavComposer: Composing Language Instructions for Navigation Trajectories through Action-Scene-Object Modularization  </h1>
 <div>
-    [IEEE TCSVT Accept]
-    <a href='https://arxiv.org/abs/2507.10894' target='_blank'>[arXiv]</a> 
+    <a href='https://ieeexplore.ieee.org/document/11115085' target='_blank'>[IEEE TCSVT]</a>
+    <a href='https://arxiv.org/abs/2507.10894' target='_blank'>[arXiv]</a>
 </div>
 </div>
 <br />
@@ -170,3 +170,16 @@ Our research also leverages several open-source models:
 [Qwen2.5-VL](https://github.com/QwenLM/Qwen2.5-VL).
 
 If you use these datasets or models, please ensure compliance with their respective agreements and licenses.
+
+## Citation
+```
+@ARTICLE{11115085,
+  author={He, Zongtao and Wang, Liuyi and Chen, Lu and Liu, Chengju and Chen, Qijun},
+  journal={IEEE Transactions on Circuits and Systems for Video Technology}, 
+  title={NavComposer: Composing Language Instructions for Navigation Trajectories through Action-Scene-Object Modularization}, 
+  year={2025},
+  volume={},
+  number={},
+  pages={1-1},
+  doi={10.1109/TCSVT.2025.3596386}}
+```
