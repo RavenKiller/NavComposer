@@ -3,6 +3,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
+from scipy.spatial.transform import Rotation
 from collections import Counter
 from tqdm import tqdm
 import cv2
@@ -17,7 +18,41 @@ import torch
 from torchmetrics import Accuracy, F1Score
 from torch.utils.tensorboard import SummaryWriter
 
-from action.datasets import ActionDatasetForVO
+from action.datasets import ActionDatasetForVO, ActionDatasetForVOInference
+
+
+def smooth_actions(
+    preds, post_process=0, level1_options=[2, 3], level2_options=[1, 2, 3]
+):
+    # level2_options=[1], only consider forward
+    # level2_options=[1,2,3], consider any 3-tuple smoothing
+    if post_process >= 2:
+        # ABA -> AAA
+        for i in range(1, len(preds) - 1):
+            if (
+                preds[i - 1] == preds[i + 1]
+                and preds[i - 1] != preds[i]
+                and preds[i - 1] in level2_options
+            ):
+                preds[i] = preds[i - 1]
+    if post_process >= 1:
+        # AAB -> AAA
+        i = 0
+        while i < len(preds):
+            j = i + 1
+            if preds[i] in level1_options:
+                local_actions = Counter([preds[i].item()])
+                while j < len(preds) and (preds[j] in level1_options):
+                    local_actions[preds[j].item()] += 1
+                    j += 1
+                local_actions = local_actions.most_common(2)
+                if (
+                    len(local_actions) > 1
+                    and local_actions[0][1] >= local_actions[1][1]
+                ):
+                    preds[i:j] = local_actions[0][0]
+            i = j
+    return preds
 
 
 class PinholeCamera:
@@ -95,7 +130,7 @@ class SimpleVisualOdometry:
 
     @property
     def default_action(self):
-        return 1
+        return 1, 0.0
 
     def get_transform(self):
         return self.cur_R, self.cur_t
@@ -144,11 +179,11 @@ class SimpleVisualOdometry:
         # beta<0 means objects move to left in the image, so the camera turn right
         beta = np.rad2deg(-np.arcsin(R[2, 0]))
         if beta < -self.angle_threshold:
-            return 3  # turn right
+            return 3, beta  # turn right
         elif beta > self.angle_threshold:
-            return 2  # turn left
+            return 2, beta  # turn left
         else:
-            return 1  # move forward
+            return 1, beta  # move forward
 
     def process_two_frames(self, img1, img2, frame_id=0):
         self.keypoints1 = []
@@ -204,8 +239,8 @@ class SimpleVisualOdometry:
             self.keypoints2,
             cameraMatrix=self.K,  # focal=self.focal, pp=self.pp
         )
-        pred_action = self.classify_motion(self.cur_R, self.cur_t)
-        return pred_action
+        pred_action, beta = self.classify_motion(self.cur_R, self.cur_t)
+        return pred_action, beta
 
     def __call__(self, batch):
         first_image = batch["first_image"]
@@ -214,14 +249,14 @@ class SimpleVisualOdometry:
         action = batch.get("action", None)
         preds = []
         for i in range(len(first_image)):
-            preds.append(
-                self.process_two_frames(
-                    cv2.cvtColor(
-                        np.array(first_image[i]), cv2.COLOR_RGB2GRAY
-                    ),  # PIL to cv2 image
-                    cv2.cvtColor(np.array(second_image[i]), cv2.COLOR_RGB2GRAY),
-                )
+            pred, beta = self.process_two_frames(
+                cv2.cvtColor(
+                    np.array(first_image[i]), cv2.COLOR_RGB2GRAY
+                ),  # PIL to cv2 image
+                cv2.cvtColor(np.array(second_image[i]), cv2.COLOR_RGB2GRAY),
             )
+            preds.append(pred)
+            # print(pred, beta)
         return preds
 
     def match_draw_two_frames(self, img1, img2):
@@ -285,32 +320,7 @@ class VOAction:
         batch = {"first_image": first_image, "second_image": second_image}
         preds = self.vo(batch)
         preds = np.array(preds)
-        if self.post_process >= 2:
-            # ABA -> AAA
-            for i in range(1, len(preds) - 1):
-                if (
-                    preds[i - 1] == preds[i + 1]
-                    and preds[i - 1] != preds[i]
-                    # and preds[i - 1] == 1
-                ):
-                    preds[i] = preds[i - 1]
-        if self.post_process >= 1:
-            # AAB -> AAA
-            i = 0
-            while i < len(preds):
-                j = i + 1
-                if preds[i] == 2 or preds[i] == 3:
-                    local_actions = Counter([preds[i].item()])
-                    while j < len(preds) and (preds[j] == 2 or preds[j] == 3):
-                        local_actions[preds[j].item()] += 1
-                        j += 1
-                    local_actions = local_actions.most_common(2)
-                    if (
-                        len(local_actions) > 1
-                        and local_actions[0][1] >= local_actions[1][1]
-                    ):
-                        preds[i:j] = local_actions[0][0]
-                i = j
+        preds = smooth_actions(preds, post_process=self.post_process)
         preds = [self.action_map[v] for v in list(preds)]
         return preds
 
@@ -331,32 +341,7 @@ def infer_one_epoch(model, loader, write_action=None, post_process=0):
         preds = torch.nn.functional.pad(preds, (0, 1))  # Pad a stop action
         actions = torch.tensor(batch["action"], device="cpu")
         assert len(preds) == len(actions)
-        if post_process >= 2:
-            # ABA -> AAA
-            for i in range(1, len(preds) - 1):
-                if (
-                    preds[i - 1] == preds[i + 1]
-                    and preds[i - 1] == 1
-                    and preds[i - 1] != preds[i]
-                ):
-                    preds[i] = preds[i - 1]
-        if post_process >= 1:
-            # AAB -> AAA
-            i = 0
-            while i < len(preds):
-                j = i + 1
-                if preds[i] == 2 or preds[i] == 3:
-                    local_actions = Counter([preds[i].item()])
-                    while j < len(preds) and (preds[j] == 2 or preds[j] == 3):
-                        local_actions[preds[j].item()] += 1
-                        j += 1
-                    local_actions = local_actions.most_common(2)
-                    if (
-                        len(local_actions) > 1
-                        and local_actions[0][1] >= local_actions[1][1]
-                    ):
-                        preds[i:j] = local_actions[0][0]
-                i = j
+        preds = smooth_actions(preds, post_process=post_process)
         if write_action:
             episode = batch["episode"]
             action_path = Path(episode) / write_action / "0.json"
@@ -378,17 +363,17 @@ def inference():
     assert os.path.exists(ckpt_folder)
     fake_ckpt_path = ckpt_folder / "voaction" / "best.pth"
     ## Parameters
-    # cam = PinholeCamera(640.0,480.0,320.0,240.0,320.0,240.0)
-    cam = PinholeCamera(224.0, 224.0, 112.0, 112.0, 111.0, 111.0)
+    cam = PinholeCamera(640.0, 480.0, 320.0, 240.0, 320.0, 240.0)
+    # cam = PinholeCamera(224.0, 224.0, 112.0, 112.0, 111.0, 111.0)
     model = SimpleVisualOdometry(cam, feature="SIFT", matcher_type="FLANN")
 
-    merge_ds = ActionDatasetForVO(
-        split=["val_seen", "val_unseen"],
+    merge_ds = ActionDatasetForVOInference(
+        split=["navtj_dj", "navtj_test"],
         need_infer=True,
-        folder="data/vlnce_traj_action",
+        folder="data",
     )
     merge_result = infer_one_epoch(
-        model, merge_ds.get_episode_batch(), write_action="action_vo"
+        model, merge_ds.get_episode_batch(), write_action="action"
     )
     print("seen and unseen {}".format(merge_result))
 
@@ -409,17 +394,50 @@ def inference():
     #     json.dump(unseen_result, f)
 
 
+def predict_action():
+    ## Parameters
+    cam = PinholeCamera(640.0, 480.0, 320.0, 240.0, 320.0, 240.0)
+    model = SimpleVisualOdometry(cam, feature="SIFT", matcher_type="FLANN")
+
+    merge_ds = ActionDatasetForVOInference(
+        split=["navtj-train", "navtj-val_unseen"],
+        need_infer=True,
+        folder="data",
+    )
+
+    loader = merge_ds.get_episode_batch()
+    write_action = "action"
+    post_process = 2
+
+    batch_bar = tqdm(loader)
+    p = []
+    for batch in batch_bar:
+        preds = model(batch)
+        preds = torch.tensor(preds, dtype=int, device="cpu")
+        preds = torch.nn.functional.pad(preds, (0, 1))  # Pad a stop action
+        preds = smooth_actions(preds, post_process=post_process)
+        if write_action:
+            episode = batch["episode"]
+            action_path = Path(episode) / write_action / "0.json"
+            os.makedirs(action_path.parent, exist_ok=True)
+            with open(action_path, "w") as f:
+                json.dump(preds.tolist(), f)
+        p.append(preds)
+    return p
+
+
 def single_test():
     data_folder = Path("data/vlntj-ce-clean/val_seen/0")
-    cam = PinholeCamera(224.0, 224.0, 112.0, 112.0, 111.0, 111.0)
+    cam = PinholeCamera(640.0, 480.0, 320.0, 240.0, 320.0, 240.0)
+    # cam = PinholeCamera(224.0, 224.0, 112.0, 112.0, 111.0, 111.0)
     vo = SimpleVisualOdometry(cam, feature="ORB")
 
     img1 = cv2.imread(
-        "data/vlntj-ce-clean/val_seen/0/rgb/5.jpg",
+        "data/navtj_test/daynav1_07-39_08-03/rgb/14.jpg",
         cv2.IMREAD_COLOR,
     )
     img2 = cv2.imread(
-        "data/vlntj-ce-clean/val_seen/0/rgb/6.jpg",
+        "data/navtj_test/daynav1_07-39_08-03/rgb/15.jpg",
         cv2.IMREAD_COLOR,
     )
     vo.match_draw_two_frames(img1, img2)
@@ -439,5 +457,6 @@ def single_test():
 
 
 if __name__ == "__main__":
-    inference()
+    # inference()
+    predict_action()
     # single_test()

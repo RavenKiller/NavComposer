@@ -302,3 +302,71 @@ class ActionDatasetForVO(torch.utils.data.Dataset):
 
     def episode_num(self):
         return len(self.episode_images)
+
+
+class ActionDatasetForVOInference(torch.utils.data.Dataset):
+    """Only for generating actions"""
+
+    def __init__(
+        self,
+        stride=1,
+        folder="data/vlnce_traj_action",
+        split="val_seen",
+        color_aug=False,
+        need_infer=False,
+    ):
+        super().__init__()
+        self.folder = Path(folder)
+        self.split = split
+
+        self.image_pairs = []
+
+        self.episode_images = {}
+
+        traj_num = 0
+        if isinstance(self.split, str):
+            self.split = [self.split]
+        for split in self.split:
+            for traj_path in (self.folder / split).glob("*"):
+                rgb_path = traj_path / "rgb"
+                action_path = traj_path / "action"
+                images = sorted(
+                    list(rgb_path.glob("*.jpg")),
+                    key=lambda x: int(x.name.split("_")[0].split(".")[0]),
+                )
+                images = images[::stride]
+                if need_infer:
+                    self.episode_images[str(rgb_path)] = images
+
+                image_pairs = list(zip(images[:-1], images[1:]))
+                self.image_pairs.extend(image_pairs)
+                traj_num += 1
+
+        # print("Split: {}, Traj num: {}, Pair num: {}".format(split, traj_num, len(self.image_pairs)))
+
+        # Augmentation
+        if color_aug:
+            self.color_jitter = BatchColorJitter(0.5, 0.5, 0.5, 0.2)
+        else:
+            self.color_jitter = BatchColorJitter(0, 0, 0, 0)
+
+    def __len__(self):
+        return len(self.image_pairs)
+
+    def get_episode_batch(self):
+        """For episode evaluation
+        The stop action is RESERVED, GT action set is {0(stop), 1(move forward), 2(turn left), 3(turn right)}
+        """
+        for episode_rgb, images in self.episode_images.items():
+            images = [Image.open(v) for v in images]
+            first_image = images[:-1]
+            second_image = images[1:]
+
+            yield {
+                "episode": str(Path(episode_rgb).parent),
+                "first_image": first_image,
+                "second_image": second_image,
+            }
+
+    def episode_num(self):
+        return len(self.episode_images)

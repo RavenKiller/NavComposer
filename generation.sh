@@ -18,11 +18,11 @@
 #SBATCH --output=data/composer.out
 
 # Uncomment proxy setting as needed
-cd ~/hzt/clash
-nohup ./clash-linux-amd64-v1.2.0 -f v2ray_forclash_9892.yaml -d . &
-export http_proxy=http://127.0.0.1:9892
-export https_proxy=http://127.0.0.1:9892
-cd -
+# cd ~/hzt/clash
+# nohup ./clash-linux-amd64-v1.2.0 -f v2ray_forclash_9892.yaml -d . &
+# export http_proxy=http://127.0.0.1:9892
+# export https_proxy=http://127.0.0.1:9892
+# cd -
 
 cd ~
 source .bashrc

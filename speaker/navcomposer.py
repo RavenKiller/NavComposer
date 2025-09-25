@@ -60,6 +60,7 @@ class NavComposer:
         self.scenes = OrderedDict()
         self.objects = OrderedDict()
         self.frame_description = ""
+        self.thinking = ""
         self.info_str = ""
         self.lock = False
 
@@ -289,6 +290,7 @@ class NavComposer:
             "scenes": self.scenes,
             "objects": self.objects,
             "summary": self.frame_description,
+            "thinking": self.thinking,
             "instruction": res,
         }
         self.info_str = json.dumps(info, indent=2)
@@ -786,4 +788,7 @@ class NavComposerV2(NavComposer):
         frame_description = "\n".join(frame_description)
         self.frame_description = frame_description
         instruction = self.summary_pipeline(frame_description)
+        if isinstance(instruction, tuple):
+            self.thinking = instruction[1]
+            instruction = instruction[0]
         return instruction

@@ -14,6 +14,7 @@ import torch.distributed as dist
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import transformers
 from functools import wraps
+from tools.api_key import OPENAI_BASE_URL, OPENAI_API_KEY, HF_TOKEN
 
 
 NONE_STR = "==NONE=="
@@ -234,7 +235,7 @@ class LLMMatcherLlama(MatcherBase):
     def __init__(self, use_bfloat16=False, use_cot=True):
         self.model_name = "meta-llama/Llama-3.1-8B-Instruct"
         self.use_bfloat16 = use_bfloat16
-        self.hf_token = "token"
+        self.hf_token = HF_TOKEN
         self.tasks = []
         self.results = []
         self.results_file = "data/llmmatcher_results_llama{}.json".format(time.time())
@@ -386,8 +387,8 @@ class LLMMatcherLlama(MatcherBase):
 class LLMMatcherGPT(MatcherBase):
     def __init__(self, use_bfloat16=False, use_cot=True):
         self.client = openai.OpenAI(
-            api_key="api_key",
-            base_url="base_url",
+            api_key=OPENAI_API_KEY,
+            base_url=OPENAI_BASE_URL,
         )
         self.model_name = "gpt-4o-mini"
         self.batch_id = ""
@@ -428,8 +429,8 @@ class LLMMatcherGPT(MatcherBase):
 class LLMMatcherDeepSeek(MatcherBase):
     def __init__(self, use_bfloat16=False, use_cot=True):
         self.client = openai.OpenAI(
-            api_key="api_key",
-            base_url="https://api.deepseek.com",
+            api_key=OPENAI_API_KEY,
+            base_url=OPENAI_BASE_URL,
         )
         self.model_name = "deepseek-chat"
         self.batch_id = ""

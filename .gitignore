@@ -30,4 +30,8 @@ tmp.sh
 tmp*.jpg
 tmp*.png
 *.mp4
+
+api_key.py
+
 *.ipynb
+maps

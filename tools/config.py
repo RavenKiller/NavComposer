@@ -3,6 +3,7 @@ import copy
 from typing import List, Tuple
 from dataclasses import dataclass, field
 from omegaconf import OmegaConf
+from tools.api_key import OPENAI_BASE_URL, OPENAI_API_KEY, HF_TOKEN
 
 
 def default_field(obj):
@@ -75,8 +76,8 @@ class MAEConfig:
 
 @dataclass
 class GPTConfig:
-    base_url: str = "base_url"
-    openai_api_key: str = "api_key"
+    base_url: str = OPENAI_BASE_URL
+    openai_api_key: str = OPENAI_API_KEY
     model_name: str = "gpt-4o-mini"
     system_prompt: str = ""
     temperature: float = 0.7
@@ -93,7 +94,7 @@ class Llama3Config:
     max_seq_len: int = 2048
     max_batch_size: int = 4
     max_gen_len: Optional[int] = 2048
-    hf_token: str = "token"
+    hf_token: str = HF_TOKEN
     hf_model_id: str = "meta-llama/Llama-3.1-8B-Instruct"
     system_prompt: str = ""
 
@@ -127,10 +128,18 @@ class Qwen25Config:
 
 
 @dataclass
+class Qwen30Config:
+    model_name: str = "Qwen/Qwen3-8B"
+    system_prompt: str = ""
+    temperature: float = 0.6
+    enable_thinking: bool = True
+
+
+@dataclass
 class Gemma2Config:
     model_name: str = "google/gemma-2-9b-it"
     max_new_tokens: int = 512
-    hf_token: str = "token"
+    hf_token: str = HF_TOKEN
     system_prompt: str = ""
 
 
@@ -209,6 +218,7 @@ class SummaryConfig:
     llama3_config: Llama3Config = Llama3Config(system_prompt=DEFAULT_PROMPT)
     gemma2_config: Gemma2Config = Gemma2Config(system_prompt=DEFAULT_PROMPT)
     qwen25_config: Qwen25Config = Qwen25Config(system_prompt=DEFAULT_PROMPT)
+    qwen30_config: Qwen30Config = Qwen30Config(system_prompt=DEFAULT_PROMPT)
 
 
 @dataclass
